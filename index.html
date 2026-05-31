@@ -719,8 +719,9 @@
 <div class="main">
   <div class="topbar">
     <div class="topbar-title" id="topbar-title">Articles HACOO</div>
-    <div class="topbar-action" id="topbar-action">
-      <button onclick="openModal('article','HACOO')">＋ Ajouter un article</button>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="topbar-action" id="topbar-action"></div>
+      <button id="admin-toggle" onclick="toggleAdmin()" title="Mode admin" style="background:transparent;border:1px solid var(--grey3);color:var(--grey5);padding:9px 14px;border-radius:var(--radius);cursor:pointer;font-size:16px;transition:all .2s">🔒</button>
     </div>
   </div>
 
@@ -858,11 +859,11 @@
           <option value="YouTube">YouTube</option>
           <option value="Facebook">Facebook</option>
           <option value="Snapchat">Snapchat</option>
+          <option value="Discord">Discord</option>
+          <option value="Telegram">Telegram</option>
           <option value="Twitter / X">Twitter / X</option>
           <option value="Pinterest">Pinterest</option>
           <option value="Autre">Autre</option>
-          <option value="Discord">Discord</option>
-          <option value="Telegram">Telegram</option>
         </select>
       </div>
       <div class="form-row">
@@ -898,11 +899,43 @@ function save() { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 // ─────────────────────────────────────────
 //  NAVIGATION
 // ─────────────────────────────────────────
+// ─────────────────────────────────────────
+//  ADMIN
+// ─────────────────────────────────────────
+const ADMIN_PASSWORD = '1234nacimrer';
+let isAdmin = false;
+
+function toggleAdmin() {
+  if (isAdmin) {
+    isAdmin = false;
+    document.getElementById('admin-toggle').textContent = '🔒';
+    document.getElementById('admin-toggle').style.color = 'var(--grey5)';
+    document.getElementById('admin-toggle').style.borderColor = 'var(--grey3)';
+    refreshTopbarAction();
+    return;
+  }
+  const pwd = prompt('Mot de passe admin :');
+  if (pwd === ADMIN_PASSWORD) {
+    isAdmin = true;
+    document.getElementById('admin-toggle').textContent = '🔓';
+    document.getElementById('admin-toggle').style.color = '#4caf50';
+    document.getElementById('admin-toggle').style.borderColor = '#4caf50';
+    refreshTopbarAction();
+  } else if (pwd !== null) {
+    alert('Mot de passe incorrect.');
+  }
+}
+
+function refreshTopbarAction() {
+  const active = document.querySelector('.nav-item.active');
+  if (active) navigate(active);
+}
+
 const PAGE_META = {
-  hacoo:   { title: 'Articles HACOO',   action: () => `<button onclick="openModal('article','HACOO')">＋ Ajouter un article</button>` },
-  shein:   { title: 'Articles SHEIN',   action: () => `<button onclick="openModal('article','SHEIN')">＋ Ajouter un article</button>` },
+  hacoo:   { title: 'Articles HACOO',   action: () => isAdmin ? `<button onclick="openModal('article','HACOO')">＋ Ajouter un article</button>` : '' },
+  shein:   { title: 'Articles SHEIN',   action: () => isAdmin ? `<button onclick="openModal('article','SHEIN')">＋ Ajouter un article</button>` : '' },
   codes:   { title: 'Codes Promo',      action: () => '' },
-  socials: { title: 'Réseaux Sociaux',  action: () => `<button onclick="openModal('social')">＋ Ajouter un réseau</button>` },
+  socials: { title: 'Réseaux Sociaux',  action: () => isAdmin ? `<button onclick="openModal('social')">＋ Ajouter un réseau</button>` : '' },
 };
 
 function navigate(btn) {
@@ -962,7 +995,7 @@ function renderArticles() {
           <div class="card-brand">${brand}</div>
           <div class="card-title">${escHtml(a.title)}</div>
         </div>
-        <button class="card-delete" onclick="event.stopPropagation();deleteArticle(${idx})" title="Supprimer">✕</button>
+        ${isAdmin ? `<button class="card-delete" onclick="event.stopPropagation();deleteArticle(${idx})" title="Supprimer">✕</button>` : ''}
       </div>`;
     }).join('');
   });
@@ -979,8 +1012,9 @@ function deleteArticle(idx) {
 // ─────────────────────────────────────────
 const SOCIAL_ICONS = {
   TikTok: '🎵', Instagram: '📸', YouTube: '▶️',
-  Facebook: '👤', Snapchat: '👻', 'Twitter / X': '✖️',
-  Pinterest: '📌', Autre: '🔗'Discord: '🎮', Telegram: '✈️',
+  Facebook: '👤', Snapchat: '👻', Discord: '🎮',
+  Telegram: '✈️', 'Twitter / X': '✖️',
+  Pinterest: '📌', Autre: '🔗'
 };
 
 function renderSocials() {
@@ -1009,7 +1043,7 @@ function renderSocials() {
         <a class="social-btn primary" href="${escHtml(s.url)}" target="_blank" rel="noopener">Ouvrir →</a>
         <button class="social-btn" onclick="navigator.clipboard.writeText('${escHtml(s.handle)}');this.textContent='Copié ✓';setTimeout(()=>this.textContent='Copier',2000)">Copier</button>
       </div>
-      <button class="social-delete" onclick="deleteSocial(${i})">✕</button>
+      ${isAdmin ? `<button class="social-delete" onclick="deleteSocial(${i})">✕</button>` : ""}
     </div>
   `).join('');
 }
