@@ -137,6 +137,16 @@
     .social-delete { position:absolute; top:12px; right:12px; background:transparent; border:none; color:var(--grey4); font-size:16px; cursor:pointer; transition:color .2s; }
     .social-delete:hover { color:var(--hacoo); }
 
+
+    /* SEARCH */
+    .search-wrap { margin-bottom:24px; position:relative; }
+    .search-wrap input { width:100%; background:var(--grey1); border:1px solid var(--grey3); color:var(--white); padding:12px 16px 12px 44px; font-family:'Barlow',sans-serif; font-size:14px; letter-spacing:0.5px; transition:border-color .2s; }
+    .search-wrap input:focus { outline:none; border-color:var(--grey5); }
+    .search-wrap input::placeholder { color:var(--grey4); }
+    .search-wrap .search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:16px; pointer-events:none; }
+    .search-wrap .search-clear { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:var(--grey5); font-size:18px; cursor:pointer; display:none; }
+    .search-wrap .search-clear.visible { display:block; }
+
     /* LOADING */
     .loading-bar { text-align:center; padding:60px 20px; color:var(--grey5); font-size:13px; letter-spacing:2px; text-transform:uppercase; }
     .loading-bar::after { content:''; display:block; width:40px; height:2px; background:var(--grey3); margin:16px auto 0; animation:pulse 1s infinite; }
@@ -216,6 +226,11 @@
         <h2>HACOO</h2>
         <p>Cliquez sur un article pour l'ouvrir directement</p>
       </div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-hacoo" placeholder="Rechercher un article HACOO..." oninput="window.filterArticles('HACOO', this.value)" />
+        <button class="search-clear" id="clear-hacoo" onclick="window.clearSearch('HACOO')">✕</button>
+      </div>
       <div class="articles-grid" id="grid-hacoo"><div class="loading-bar" style="grid-column:1/-1">Chargement</div></div>
     </div>
 
@@ -223,6 +238,11 @@
       <div class="section-intro">
         <h2>SHEIN</h2>
         <p>Cliquez sur un article pour l'ouvrir directement</p>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-shein" placeholder="Rechercher un article SHEIN..." oninput="window.filterArticles('SHEIN', this.value)" />
+        <button class="search-clear" id="clear-shein" onclick="window.clearSearch('SHEIN')">✕</button>
       </div>
       <div class="articles-grid" id="grid-shein"><div class="loading-bar" style="grid-column:1/-1">Chargement</div></div>
     </div>
@@ -387,26 +407,8 @@
   function renderArticles() {
     ['HACOO','SHEIN'].forEach(brand => {
       const key = brand.toLowerCase();
-      const grid = document.getElementById('grid-' + key);
-      const items = articles.filter(a => a.brand === brand);
-      document.getElementById('count-' + key).textContent = items.length;
-      if (!items.length) {
-        grid.innerHTML = `<div class="empty-state"><div class="e-icon">${ICONS[brand]}</div><h3>Aucun article</h3><p>Cliquez sur "＋ Ajouter" pour commencer</p></div>`;
-        return;
-      }
-      grid.innerHTML = items.map(a => `
-        <div class="article-card" onclick="window.open('${escHtml(a.url)}','_blank')">
-          <div class="card-img-wrap">
-            ${a.img ? `<img src="${escHtml(a.img)}" alt="${escHtml(a.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
-            <div class="card-placeholder" style="${a.img?'display:none':''}">${ICONS[brand]}</div>
-            <div class="card-overlay"><span>Voir l'article</span></div>
-          </div>
-          <div class="card-body">
-            <div class="card-brand">${brand}</div>
-            <div class="card-title">${escHtml(a.title)}</div>
-          </div>
-          ${isAdmin ? `<button class="card-delete" onclick="event.stopPropagation();window.deleteArticle('${a.id}')" title="Supprimer">✕</button>` : ''}
-        </div>`).join('');
+      const query = document.getElementById('search-' + key) ? document.getElementById('search-' + key).value : '';
+      renderArticlesBrand(brand, query);
     });
   }
 
@@ -490,6 +492,54 @@
   // ── UTILS ──
   function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+
+  // ── SEARCH / FILTER ──
+  window.filterArticles = function(brand, query) {
+    const key = brand.toLowerCase();
+    const clearBtn = document.getElementById('clear-' + key);
+    if (clearBtn) clearBtn.classList.toggle('visible', query.length > 0);
+    renderArticlesBrand(brand, query);
+  };
+
+  window.clearSearch = function(brand) {
+    const key = brand.toLowerCase();
+    const input = document.getElementById('search-' + key);
+    if (input) input.value = '';
+    const clearBtn = document.getElementById('clear-' + key);
+    if (clearBtn) clearBtn.classList.remove('visible');
+    renderArticlesBrand(brand, '');
+  };
+
+  function renderArticlesBrand(brand, query) {
+    const key = brand.toLowerCase();
+    const grid = document.getElementById('grid-' + key);
+    let items = articles.filter(a => a.brand === brand);
+    if (query && query.trim()) {
+      const q = query.toLowerCase().trim();
+      items = items.filter(a => a.title.toLowerCase().includes(q));
+    }
+    document.getElementById('count-' + key).textContent = articles.filter(a => a.brand === brand).length;
+    if (!items.length) {
+      grid.innerHTML = query
+        ? `<div class="empty-state"><div class="e-icon">🔍</div><h3>Aucun résultat</h3><p>Aucun article ne correspond à "${escHtml(query)}"</p></div>`
+        : `<div class="empty-state"><div class="e-icon">${ICONS[brand]}</div><h3>Aucun article</h3><p>Cliquez sur "＋ Ajouter" pour commencer</p></div>`;
+      return;
+    }
+    grid.innerHTML = items.map(a => `
+      <div class="article-card" onclick="window.open('${escHtml(a.url)}','_blank')">
+        <div class="card-img-wrap">
+          ${a.img ? `<img src="${escHtml(a.img)}" alt="${escHtml(a.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
+          <div class="card-placeholder" style="${a.img?'display:none':''}">${ICONS[brand]}</div>
+          <div class="card-overlay"><span>Voir l'article</span></div>
+        </div>
+        <div class="card-body">
+          <div class="card-brand">${brand}</div>
+          <div class="card-title">${escHtml(a.title)}</div>
+        </div>
+        ${isAdmin ? `<button class="card-delete" onclick="event.stopPropagation();window.deleteArticle('${a.id}')" title="Supprimer">✕</button>` : ''}
+      </div>`).join('');
   }
 
   // ── LIVE SYNC FIREBASE ──
